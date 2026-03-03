@@ -34,7 +34,11 @@ local get_test_data = function(file)
 		item = vim.json.decode(item)
 		local image = item.image
 		image = vim.iter(image):map(function(pixel) return { pixel / 255 } end):totable()
-		return { matrix.tomatrix(image), matrix.tomatrix({{ item.label }}) }
+        return {
+            matrix.tomatrix(image),
+			-- label is 0-based, so we convert to 1-based for our network
+            item.label + 1,
+		}
 	end):totable()
 end
 

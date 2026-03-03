@@ -88,10 +88,20 @@ function M.Network:feedforward(a)
     return a
 end
 
+--- Returns the vector of partial derivatives ∂C/∂a for the quadratic cost function.
+---@param output_activations brain.Matrix output layer activations (column vector)
+---@param y brain.Matrix target/label vector (column vector)
+---@return brain.Matrix
 function M.Network:cost_derivative(output_activations, y)
     return output_activations - y
 end
 
+--- Computes the gradient of the cost function for a single training sample
+--- using the backpropagation algorithm.
+---@param x brain.Matrix input column vector
+---@param y brain.Matrix target column vector (e.g. one-hot)
+---@return brain.Matrix[] nabla_b gradients for biases, indexed by layer
+---@return brain.Matrix[] nabla_w gradients for weights, indexed by layer
 function M.Network:backprop(x, y)
     local nabla_b = {}
     local nabla_w = {}
@@ -160,22 +170,26 @@ function M.Network:update_mini_batch(mini_batch, eta)
     end
 end
 
+---@param image integer[]
+---@return integer predicted label 1-based
+function M.Network:predict(image)
+    local output = self:feedforward(image)
+    local max_index = 1
+    for i = 2, #output do
+        if output[i][1] > output[max_index][1] then
+            max_index = i
+        end
+    end
+    return max_index
+end
+
+---@param test_data { [1]: integer[], [2]: integer }[]
+---@return integer
 function M.Network:evaluate(test_data)
-    local test_results = {}
+    local correct = 0
     for _, v in ipairs(test_data) do
         local x, y = unpack(v)
-        local output = self:feedforward(x)
-        local max_index = 1
-        for i = 2, #output do
-            if output[i][1] > output[max_index][1] then
-                max_index = i
-            end
-        end
-        table.insert(test_results, { max_index, y[1][1] })
-    end
-    local correct = 0
-    for _, v in ipairs(test_results) do
-        if v[1] - 1 == v[2] then correct = correct + 1 end
+        if self:predict(x) == y then correct = correct + 1 end
     end
     return correct
 end
