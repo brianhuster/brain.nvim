@@ -26,13 +26,23 @@ end
 local function sigmoid(z)
     if type(z) == "number" then
         return 1 / (1 + math.exp(-z))
-    else -- is a table
-        local result = {}
-        for i, v in ipairs(z) do
-            result[i] = sigmoid(v)
-        end
-        return matrix.tomatrix(result)
     end
+
+    local rows = #z
+    local cols = #z[1]
+    local result = {}
+
+    for i = 1, rows do
+        result[i] = {}
+        for j = 1, cols do
+            -- Tính toán trực tiếp từng phần tử
+            local val = z[i][j]
+            result[i][j] = 1 / (1 + math.exp(-val))
+        end
+    end
+
+    result.shape = { rows, cols }
+    return matrix.tomatrix(result)
 end
 
 ---@generic T : number|brain.Matrix
