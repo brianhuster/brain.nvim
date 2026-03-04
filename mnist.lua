@@ -16,30 +16,50 @@ vim.cmd([[
 ]])
 
 local get_training_data = function(file)
-    return vim.iter(vim.fn.systemlist("gzip -dc " .. file)):map(function(item)
-		item = vim.json.decode(item)
-		local image = item.image
-		image = vim.iter(image):map(function(pixel) return { pixel / 255 } end):totable()
+    local pipe = io.popen("gzip -dc " .. file)
+    if not pipe then
+        error("Could not open file for reading: " .. file)
+    end
+    local items = {}
+    local json_line = ""
+    local i = 1
+    while true do
+        json_line = pipe:read("*l")
+        if not json_line then break end
+        local item = vim.json.decode(json_line)
+        local image = item.image
+        image = vim.iter(image):map(function(pixel) return { pixel / 255 } end):totable()
         local label = item.label
         local label_vector = {}
-		for i = 1, 10 do
-			label_vector[i] = i == label + 1 and {1} or {0}
-		end
-		return { matrix.tomatrix(image), matrix.tomatrix(label_vector) }
-	end):totable()
+        for j = 1, 10 do
+            label_vector[j] = j == label + 1 and { 1 } or { 0 }
+        end
+        items[i] = { matrix.tomatrix(image), matrix.tomatrix(label_vector) }
+		i = i + 1
+    end
+    pipe:close()
+    return items
 end
 
 local get_test_data = function(file)
-    return vim.iter(vim.fn.systemlist("gzip -dc " .. file)):map(function(item)
-		item = vim.json.decode(item)
-		local image = item.image
-		image = vim.iter(image):map(function(pixel) return { pixel / 255 } end):totable()
-        return {
-            matrix.tomatrix(image),
-			-- label is 0-based, so we convert to 1-based for our network
-            item.label + 1,
-		}
-	end):totable()
+    local pipe = io.popen("gzip -dc " .. file)
+    if not pipe then
+        error("Could not open file for reading: " .. file)
+    end
+    local items = {}
+    local json_line = ""
+    local i = 1
+    while true do
+        json_line = pipe:read("*l")
+        if not json_line then break end
+        local item = vim.json.decode(json_line)
+        local image = item.image
+        image = vim.iter(image):map(function(pixel) return { pixel / 255 } end):totable()
+        items[i] = { matrix.tomatrix(image), item.label + 1 }
+		i = i + 1
+    end
+    pipe:close()
+    return items
 end
 
 print("Loading training and test data...")
